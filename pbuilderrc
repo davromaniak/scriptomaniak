@@ -1,0 +1,112 @@
+# Some needed functions (don't forget we use /bin/bash)
+# Check if value is in array 
+in_array() {
+	local pool search=$1
+	shift
+	for pool; do
+		[[ $pool == $search ]] && return 0
+	done
+	return 1
+}
+
+# Default values for $DIST and $ARCH
+# They are both set to the system values
+: ${DIST:="$(lsb_release --short --codename)"}
+: ${ARCH:="$(dpkg --print-architecture)"}
+
+# Codenames for Debian suites according to their alias.
+# Update these when needed.
+UNSTABLE_CODENAME="sid"
+TESTING_CODENAME="wheezy"
+STABLE_CODENAME="squeeze"
+OLD_STABLE_CODENAME="lenny"
+STABLE_BACKPORTS_SUITE="$STABLE_CODENAME-backports"
+OLD_STABLE_BACKPORTS_SUITE="$OLD_STABLE_CODENAME-backports"
+
+# List of Debian suites.
+DEBIAN_SUITES=($UNSTABLE_CODENAME $TESTING_CODENAME $STABLE_CODENAME $OLD_STABLE_CODENAME "unstable" "testing" "stable" "experimental")
+
+# List of Ubuntu suites. Update these when needed.
+UBUNTU_SUITES=("precise" "oneiric" "natty" "maverick" "lucid" "karmic" "jaunty" "intrepid" "hardy" "gutsy")
+OLD_UBUNTU_SUITES=("karmic" "jaunty" "intrepid" "hardy" "gutsy")
+
+# Mirrors to use. Update these to your preferred mirror.
+DEBIAN_MIRROR="ftp.fr.debian.org"
+UBUNTU_MIRROR="fr.archive.ubuntu.com"
+
+# Use old releases repo if dist is not supported anymore
+if in_array $DIST ${OLD_UBUNTU_SUITES[@]}; then
+	UBUNTU_MIRROR="old-releases.ubuntu.com"
+fi
+
+NAME="$DIST"
+if [ -n "${ARCH}" ]; then
+	NAME="$NAME-$ARCH"
+	DEBOOTSTRAPOPTS=("--arch" "$ARCH" "${DEBOOTSTRAPOPTS[@]}")
+fi
+
+APTCACHEHARDLINK="no" 
+BASETGZ="/var/cache/pbuilder/$NAME-base.tgz"
+DISTRIBUTION="$DIST"
+BUILDRESULT="/var/cache/pbuilder/$NAME/result/"
+APTCACHE="/var/cache/pbuilder/$NAME/aptcache/"
+BUILDPLACE="/var/cache/pbuilder/build/"
+DEBOOTSTRAP="/usr/sbin/qemu-debootstrap"
+
+if in_array $DIST ${DEBIAN_SUITES[@]}; then
+	# Debian configuration.
+	MIRRORSITE="http://$DEBIAN_MIRROR/debian"
+
+	# Test if arch exists for the given dist.
+	if ! wget --spider -q ${MIRRORSITE}/dists/${DIST}/Contents-${ARCH}.gz; then
+		echo "Unknown arch ${ARCH} for distribution ${DIST}"
+		exit 2
+	fi
+
+	# Components used in the chroot.
+	COMPONENTS="main contrib non-free"
+	
+	# Add other repositories to the chroot.
+	if $(echo "$STABLE_CODENAME stable" | grep -q $DIST); then
+		OTHERMIRROR="$OTHERMIRROR | deb http://backports.debian.org/debian-backports $STABLE_BACKPORTS_SUITE $COMPONENTS"
+	elif $(echo "$OLD_STABLE_CODENAME" | grep -q $DIST); then
+		EXTRAPACKAGES="$EXTRAPACKAGES debian-backports-keyring"
+		OTHERMIRROR="$OTHERMIRROR | deb http://backports.debian.org/debian-backports $OLD_STABLE_BACKPORTS_SUITE $COMPONENTS"
+	# Manage the experimental chroot using sid + experimental repo.
+	elif $(echo "experimental" | grep -q $DIST); then
+		DIST="sid"
+		OTHERMIRROR="$OTHERMIRROR | deb http://ftp.de.debian.org/debian/ experimental $COMPONENTS"
+	fi
+elif in_array $DIST ${UBUNTU_SUITES[@]}; then
+	# Ubuntu configuration.
+	MIRRORSITE="http://$UBUNTU_MIRROR/ubuntu/"
+	
+	# Test if arch exists for the given dist and select ports.ubuntu.com if needed
+	if ! wget --spider -q ${MIRRORSITE}/dists/${DIST}/Contents-${ARCH}.gz; then
+		if ! wget --spider -q http://ports.ubuntu.com/dists/${DIST}/Contents-${ARCH}.gz; then
+			echo "Unknown arch ${ARCH} for distribution ${DIST}"
+			exit 2
+		else
+			MIRRORSITE="http://ports.ubuntu.com/"
+		fi
+	fi
+	
+	# Components used in the chroot
+	COMPONENTS="main restricted universe multiverse"
+	
+	# Add the Ubuntu keyring to the debootstrap options (Needed when building Ubuntu packages under Debbian)
+	v=0
+	n=0
+	for i in ${DEBOOTSTRAPOPTS[@]}; do
+		if [ $v -ne 0 ]; then
+			DEBOOTSTRAPOPTS[$n]="/usr/share/keyrings/ubuntu-archive-keyring.gpg"
+		fi
+		if [ $i == "--keyring" ]; then
+			v=1;
+		fi
+		n=$((n+1))
+	done
+else
+	echo "Unknown distribution: $DIST"
+	exit 1
+fi
