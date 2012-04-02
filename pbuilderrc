@@ -40,7 +40,7 @@ fi
 
 NAME="$DIST"
 if [ -n "${ARCH}" ]; then
-	NAME="$NAME-$ARCH"
+	NAME="$NAME/$ARCH"
 	DEBOOTSTRAPOPTS=("--arch" "$ARCH" "${DEBOOTSTRAPOPTS[@]}")
 fi
 
