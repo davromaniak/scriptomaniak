@@ -45,7 +45,7 @@ if [ -n "${ARCH}" ]; then
 fi
 
 APTCACHEHARDLINK="no" 
-BASETGZ="/var/cache/pbuilder/$NAME-base.tgz"
+BASETGZ="/var/cache/pbuilder/$NAME.tgz"
 DISTRIBUTION="$DIST"
 BUILDRESULT="/var/cache/pbuilder/$NAME/result/"
 APTCACHE="/var/cache/pbuilder/$NAME/aptcache/"
