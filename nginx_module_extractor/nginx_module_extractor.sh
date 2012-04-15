@@ -36,6 +36,7 @@ echo ");"
 
 # PARSING debian/rules file and displaying report
 basedir=$1
+echo "Module status for NGINX $(head -1 $basedir/changelog | sed -e "s/^.* (\(.*\)) .*$/\1/")"
 for fl in $(grep -En '^config.status.[a-z]*:.*$' $basedir/rules | cut -d ":" -f1,2 | sed -e "s/config\.status\.//"); do
 	unset bline eline flavour
 	eval $(echo $fl | sed -e "s/^\(.*\):\(.*\)$/bline=\1;flavour=\2/")
