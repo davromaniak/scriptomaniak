@@ -26,7 +26,7 @@ DEBIAN_SUITES=($UNSTABLE_CODENAME $TESTING_CODENAME $STABLE_CODENAME "unstable" 
 
 # List of Ubuntu suites. Update these when needed.
 UBUNTU_SUITES=("precise" "oneiric" "natty" "maverick" "lucid" "karmic" "jaunty" "intrepid" "hardy" "gutsy")
-OLD_UBUNTU_SUITES=("karmic" "jaunty" "intrepid" "hardy" "gutsy")
+OLD_UBUNTU_SUITES=("karmic" "jaunty" "intrepid" "gutsy")
 
 # Mirrors to use. Update these to your preferred mirror.
 DEBIAN_MIRROR="ftp.fr.debian.org"
@@ -41,7 +41,7 @@ fi
 NAME="$DIST"
 if [ -n "${ARCH}" ]; then
 	NAME="$NAME/$ARCH"
-	DEBOOTSTRAPOPTS=("--arch" "$ARCH" "${DEBOOTSTRAPOPTS[@]}")
+	DEBOOTSTRAPOPTS=("--include=gpgv" "--arch" "$ARCH" "${DEBOOTSTRAPOPTS[@]}")
 fi
 
 APTCACHEHARDLINK="no" 
