@@ -17,16 +17,20 @@ in_array() {
 # Codenames for Debian suites according to their alias.
 # Update these when needed.
 UNSTABLE_CODENAME="sid"
-TESTING_CODENAME="wheezy"
-STABLE_CODENAME="squeeze"
+TESTING_CODENAME="jessie"
+STABLE_CODENAME="wheezy"
 STABLE_BACKPORTS_SUITE="$STABLE_CODENAME-backports"
+OLD_STABLE_CODENAME="squeeze"
+OLD_STABLE_BACKPORTS_SUITE="$OLD_STABLE_CODENAME-backports"
+OLD_STABLE_BACKPORTS_SLOPPY_SUITE="$OLD_STABLE_BACKPORTS_SUITE-sloppy"
 
 # List of Debian suites.
 DEBIAN_SUITES=($UNSTABLE_CODENAME $TESTING_CODENAME $STABLE_CODENAME "unstable" "testing" "stable" "experimental")
 
-# List of Ubuntu suites. Update these when needed.
-UBUNTU_SUITES=("raring" "quantal" "precise" "oneiric" "natty" "maverick" "lucid" "karmic" "jaunty" "intrepid" "hardy" "gutsy")
-OLD_UBUNTU_SUITES=("karmic" "jaunty" "intrepid" "gutsy")
+# List of Ubuntu suites still supported
+UBUNTU_SUITES=("saucy" "raring" "quantal" "precise" "lucid")
+# List of Ubuntu suites not supported anymore
+OLD_UBUNTU_SUITES=("oneiric" "natty" "maverick" "karmic" "jaunty" "intrepid" "hardy" "gutsy")
 
 # Mirrors to use. Update these to your preferred mirror.
 DEBIAN_MIRROR="ftp.fr.debian.org"
@@ -57,7 +61,7 @@ if in_array $DIST ${DEBIAN_SUITES[@]}; then
 	MIRRORSITE="http://$DEBIAN_MIRROR/debian"
 
 	# Test if arch exists for the given dist.
-	if ! wget --spider -q ${MIRRORSITE}/dists/${DIST}/Contents-${ARCH}.gz; then
+	if ! wget --spider -q ${MIRRORSITE}/dists/${DIST}/main/Contents-${ARCH}.gz; then
 		echo "Unknown arch ${ARCH} for distribution ${DIST}"
 		exit 2
 	fi
@@ -66,15 +70,15 @@ if in_array $DIST ${DEBIAN_SUITES[@]}; then
 	COMPONENTS="main contrib non-free"
 	
 	# Add other repositories to the chroot.
-	if $(echo "$STABLE_CODENAME stable" | grep -q $DIST); then
-		OTHERMIRROR="$OTHERMIRROR | deb http://backports.debian.org/debian-backports $STABLE_BACKPORTS_SUITE $COMPONENTS"
-	elif $(echo "$OLD_STABLE_CODENAME" | grep -q $DIST); then
-		EXTRAPACKAGES="$EXTRAPACKAGES debian-backports-keyring"
-		OTHERMIRROR="$OTHERMIRROR | deb http://backports.debian.org/debian-backports $OLD_STABLE_BACKPORTS_SUITE $COMPONENTS"
+	if $(echo "$OLD_STABLE_CODENAME stable" | grep -q $DIST); then
+		OTHERMIRROR="$OTHERMIRROR | deb http://$DEBIAN_MIRROR/debian-backports $OLD_STABLE_BACKPORTS_SUITE $COMPONENTS"
+		OTHERMIRROR="$OTHERMIRROR | deb http://$DEBIAN_MIRROR/debian-backports $OLD_STABLE_BACKPORTS_SLOPPY_SUITE $COMPONENTS"
+	elif $(echo "$STABLE_BACKPORTS_SUITE" | grep -q $DIST); then
+		OTHERMIRROR="$OTHERMIRROR | deb http://$DEBIAN_MIRROR/debian $STABLE_BACKPORTS_SUITE $COMPONENTS"
 	# Manage the experimental chroot using sid + experimental repo.
 	elif $(echo "experimental" | grep -q $DIST); then
 		DIST="sid"
-		OTHERMIRROR="$OTHERMIRROR | deb http://ftp.de.debian.org/debian/ experimental $COMPONENTS"
+		OTHERMIRROR="$OTHERMIRROR | deb http://$DEBIAN_MIRROR/debian experimental $COMPONENTS"
 	fi
 elif in_array $DIST ${UBUNTU_SUITES[@]}; then
 	# Ubuntu configuration.
