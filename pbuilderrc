@@ -25,7 +25,7 @@ OLD_STABLE_BACKPORTS_SUITE="$OLD_STABLE_CODENAME-backports"
 OLD_STABLE_BACKPORTS_SLOPPY_SUITE="$OLD_STABLE_BACKPORTS_SUITE-sloppy"
 
 # List of Debian suites.
-DEBIAN_SUITES=($UNSTABLE_CODENAME $TESTING_CODENAME $STABLE_CODENAME "unstable" "testing" "stable" "experimental")
+DEBIAN_SUITES=($UNSTABLE_CODENAME $TESTING_CODENAME $STABLE_CODENAME $OLD_STABLE_CODENAME "unstable" "testing" "stable" "experimental")
 
 # List of Ubuntu suites still supported
 UBUNTU_SUITES=("saucy" "raring" "quantal" "precise" "lucid")
@@ -61,16 +61,23 @@ if in_array $DIST ${DEBIAN_SUITES[@]}; then
 	MIRRORSITE="http://$DEBIAN_MIRROR/debian"
 
 	# Test if arch exists for the given dist.
-	if ! wget --spider -q ${MIRRORSITE}/dists/${DIST}/main/Contents-${ARCH}.gz; then
-		echo "Unknown arch ${ARCH} for distribution ${DIST}"
-		exit 2
+	if $(echo "$OLD_STABLE_CODENAME oldstable" | grep -q $DIST); then
+		if ! wget --spider -q ${MIRRORSITE}/dists/${DIST}/Contents-${ARCH}.gz; then
+			echo "Unknown arch ${ARCH} for distribution ${DIST}"
+			exit 2
+		fi
+	else	
+		if ! wget --spider -q ${MIRRORSITE}/dists/${DIST}/main/Contents-${ARCH}.gz; then
+			echo "Unknown arch ${ARCH} for distribution ${DIST}"
+			exit 2
+		fi
 	fi
 
 	# Components used in the chroot.
 	COMPONENTS="main contrib non-free"
 	
 	# Add other repositories to the chroot.
-	if $(echo "$OLD_STABLE_CODENAME stable" | grep -q $DIST); then
+	if $(echo "$OLD_STABLE_CODENAME oldstable" | grep -q $DIST); then
 		OTHERMIRROR="$OTHERMIRROR | deb http://$DEBIAN_MIRROR/debian-backports $OLD_STABLE_BACKPORTS_SUITE $COMPONENTS"
 		OTHERMIRROR="$OTHERMIRROR | deb http://$DEBIAN_MIRROR/debian-backports $OLD_STABLE_BACKPORTS_SLOPPY_SUITE $COMPONENTS"
 	elif $(echo "$STABLE_BACKPORTS_SUITE" | grep -q $DIST); then
